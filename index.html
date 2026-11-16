@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>热点收集助手</title>
+<style>
+  :root{
+    --bg:#0f1116; --panel:#181b23; --panel2:#1f232d; --line:#2a2f3a;
+    --text:#e6e8ee; --muted:#9097a5; --accent:#5b8cff; --accent2:#7c6cff;
+    --red:#ff5c6c; --green:#3ddc97; --gold:#ffc857;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:"Microsoft YaHei","PingFang SC",system-ui,sans-serif;min-height:100vh;padding:28px 20px 60px}
+  .wrap{max-width:1080px;margin:0 auto}
+  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px}
+  h1{font-size:24px;font-weight:700;letter-spacing:.5px}
+  h1 .dot{color:var(--accent)}
+  header .sub{color:var(--muted);font-size:13px;margin-top:4px}
+  .header-right{display:flex;gap:10px;align-items:center}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:20px}
+  .card h2{font-size:16px;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+  .card h2 .bar{width:3px;height:16px;background:linear-gradient(var(--accent),var(--accent2));border-radius:2px}
+  label{display:block;font-size:12px;color:var(--muted);margin:10px 0 6px}
+  input,textarea,select{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:9px;color:var(--text);padding:11px 13px;font-size:14px;outline:none;font-family:inherit;transition:border .15s}
+  input:focus,textarea:focus,select:focus{border-color:var(--accent)}
+  textarea{resize:vertical;min-height:70px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .row-full{grid-column:1/-1}
+  button{cursor:pointer;border:none;border-radius:9px;padding:11px 20px;font-size:14px;font-weight:600;font-family:inherit;transition:transform .1s,opacity .15s;white-space:nowrap}
+  button:active{transform:scale(.97)}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  .btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
+  .btn-ghost{background:var(--panel2);color:var(--text);border:1px solid var(--line)}
+  .btn-sm{padding:7px 13px;font-size:12px;border-radius:7px}
+  .btn-danger{background:transparent;color:var(--red);border:1px solid #5a2a31}
+  .btn-green{background:linear-gradient(135deg,#2bb57f,#1e9e9e);color:#fff}
+  .form-actions{display:flex;gap:10px;margin-top:16px;align-items:center}
+  /* 抓取区 */
+  .fetch-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+  .fetch-bar .field{flex:1;min-width:160px}
+  .src-chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .chip{background:var(--panel2);border:1px solid var(--line);color:var(--muted);padding:7px 14px;border-radius:20px;font-size:12px;cursor:pointer;transition:.15s}
+  .chip:hover{border-color:var(--accent);color:var(--text)}
+  .chip.on{background:rgba(91,140,255,.15);border-color:var(--accent);color:#a9c2ff}
+  .result{margin-top:16px;max-height:340px;overflow:auto;border:1px solid var(--line);border-radius:10px}
+  .result-item{display:flex;gap:12px;align-items:flex-start;padding:11px 14px;border-bottom:1px solid var(--line);background:var(--panel2)}
+  .result-item:last-child{border-bottom:none}
+  .result-item .idx{color:var(--accent);font-weight:700;font-size:13px;min-width:26px}
+  .result-item .body{flex:1;min-width:0}
+  .result-item .t{font-size:13px;line-height:1.5;word-break:break-all}
+  .result-item .t a{color:var(--text);text-decoration:none}
+  .result-item .t a:hover{color:var(--accent);text-decoration:underline}
+  .result-item .meta{color:var(--muted);font-size:11px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .result-head{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:#20242e;font-size:13px;color:var(--muted);position:sticky;top:0;z-index:2}
+  /* 列表区 */
+  .toolbar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+  .toolbar .search{flex:1;min-width:200px}
+  .hint{color:var(--muted);font-size:12px;margin-left:auto;align-self:center}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--muted);font-weight:500;font-size:12px;position:sticky;top:0;background:var(--panel);z-index:1}
+  td .title-cell{color:var(--text);line-height:1.5;word-break:break-all}
+  td .title-cell a{color:var(--text);text-decoration:none}
+  td .title-cell a:hover{color:var(--accent)}
+  td .note{color:var(--muted);font-size:11px;margin-top:3px;max-width:420px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .tag{display:inline-block;padding:2px 9px;border-radius:12px;font-size:11px;background:rgba(124,108,255,.15);color:#b9adff;white-space:nowrap}
+  .tag.manual{background:rgba(61,220,151,.13);color:var(--green)}
+  .hot-badge{color:var(--gold);font-size:12px;white-space:nowrap}
+  .time{color:var(--muted);font-size:11px;white-space:nowrap}
+  .ops{display:flex;gap:6px;white-space:nowrap}
+  .empty{text-align:center;color:var(--muted);padding:50px 0;font-size:14px}
+  .toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(100px);background:#2a2f3a;color:#fff;padding:12px 24px;border-radius:10px;font-size:14px;opacity:0;transition:.28s;z-index:99;box-shadow:0 8px 30px rgba(0,0,0,.4);border:1px solid var(--line)}
+  .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+  .toast.ok{border-color:var(--green)} .toast.err{border-color:var(--red)}
+  .loading{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:-2px;margin-right:6px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @media(max-width:720px){.grid{grid-template-columns:1fr}.row-full{grid-column:1}.header-right{width:100%}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1><span class="dot">●</span> 热点收集助手</h1>
+      <div class="sub">手动录入 · 抓取公开热榜 · 本地保存</div>
+    </div>
+    <div class="header-right">
+      <button class="btn-ghost btn-sm" id="refreshBtn">刷新列表</button>
+      <button class="btn-danger btn-sm" id="clearBtn">清空全部</button>
+    </div>
+  </header>
+
+  <!-- 录入 -->
+  <div class="card">
+    <h2><span class="bar"></span>录入热点</h2>
+    <div class="grid">
+      <div class="row-full">
+        <label>热点内容 / 标题 *</label>
+        <input id="f-title" placeholder="例如：某公众号发布的关于 AI 的行业观察文章">
+      </div>
+      <div>
+        <label>来源</label>
+        <input id="f-source" placeholder="例如：某某公众号 / 微博">
+      </div>
+      <div>
+        <label>标签</label>
+        <input id="f-tag" value="手动录入" placeholder="手动录入">
+      </div>
+      <div class="row-full">
+        <label>链接（可选）</label>
+        <input id="f-link" placeholder="https://...">
+      </div>
+      <div class="row-full">
+        <label>备注（可选）</label>
+        <textarea id="f-note" placeholder="记录这件事的要点、相关人物等"></textarea>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" id="addBtn">＋ 添加到列表</button>
+      <span style="color:var(--muted);font-size:12px">支持回车快速提交（在标题框按 Ctrl+Enter）</span>
+    </div>
+  </div>
+
+  <!-- 抓取 -->
+  <div class="card">
+    <h2><span class="bar"></span>抓取公开热榜</h2>
+    <div class="fetch-bar">
+      <div class="field">
+        <label>选择榜单</label>
+        <select id="sourceSelect"></select>
+      </div>
+      <button class="btn-green" id="fetchBtn">抓取并预览</button>
+    </div>
+    <div class="src-chips" id="srcChips"></div>
+    <div id="resultBox"></div>
+  </div>
+
+  <!-- 列表 -->
+  <div class="card">
+    <h2><span class="bar"></span>已收集 <span id="count" style="color:var(--accent);font-weight:400"></span></h2>
+    <div class="toolbar">
+      <input class="search" id="searchInput" placeholder="搜索标题、备注、来源、标签...">
+      <span class="hint" id="hint"></span>
+    </div>
+    <div style="overflow-x:auto">
+      <table>
+        <thead><tr><th style="width:36%">热点内容</th><th>来源</th><th>标签</th><th>热度</th><th>时间</th><th>操作</th></tr></thead>
+        <tbody id="list"></tbody>
+      </table>
+    </div>
+    <div class="empty" id="empty" style="display:none">暂无数据，先在上面录入一条或抓取热榜吧</div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+let SOURCES = [], currentItems = [];
+
+function toast(msg, type='ok'){
+  const t=$('toast'); t.textContent=msg; t.className='toast show '+type;
+  clearTimeout(t._t); t._t=setTimeout(()=>t.className='toast',2200);
+}
+async function api(url, opts){ const r=await fetch(url,opts); return r.json(); }
+function esc(s){ return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+// 初始化数据源
+async function initSources(){
+  const d = await api('/api/sources');
+  SOURCES = d.sources;
+  $('sourceSelect').innerHTML = SOURCES.map(s=>`<option value="${s.key}">${s.name}</option>`).join('');
+  $('srcChips').innerHTML = SOURCES.map(s=>`<span class="chip" data-k="${s.key}">${s.name}</span>`).join('');
+  document.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{
+    $('sourceSelect').value=c.dataset.k;
+    document.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));
+    c.classList.add('on');
+    fetchData();
+  });
+}
+
+// 抓取预览
+async function fetchData(){
+  const key=$('sourceSelect').value;
+  const btn=$('fetchBtn');
+  btn.disabled=true; btn.innerHTML='<span class="loading"></span>抓取中';
+  $('resultBox').innerHTML='';
+  try{
+    const d=await api('/api/fetch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({source:key})});
+    if(!d.ok){ toast(d.msg,'err'); $('resultBox').innerHTML=`<div style="color:var(--muted);font-size:13px;padding:14px">抓取失败：${esc(d.msg)}</div>`; return; }
+    currentItems=d.items;
+    const rows=d.items.map((it,i)=>`
+      <div class="result-item">
+        <div class="idx">${i+1}</div>
+        <div class="body">
+          <div class="t">${it.link?`<a href="${esc(it.link)}" target="_blank">${esc(it.title)}</a>`:esc(it.title)}</div>
+          <div class="meta">${esc(it.note||'')}${it.hot?' · 热度 '+it.hot:''}</div>
+        </div>
+      </div>`).join('');
+    $('resultBox').innerHTML=`
+      <div class="result">
+        <div class="result-head"><span>${esc(d.name)} · 共 ${d.items.length} 条</span>
+          <button class="btn-primary btn-sm" id="collectBtn">全部收藏入库</button></div>
+        ${rows}
+      </div>`;
+    $('collectBtn').onclick=collectAll;
+    toast(`抓到 ${d.items.length} 条，确认后收藏入库`);
+  }catch(e){ toast('请求失败：'+e.message,'err'); }
+  finally{ btn.disabled=false; btn.textContent='抓取并预览'; }
+}
+async function collectAll(){
+  if(!currentItems.length) return;
+  const d=await api('/api/hotspots/batch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items:currentItems})});
+  toast(d.msg, d.ok?'ok':'err');
+  if(d.ok) loadList();
+}
+
+// 列表
+async function loadList(){
+  const q=$('searchInput').value.trim();
+  const d=await api('/api/hotspots'+(q?'?q='+encodeURIComponent(q):''));
+  const items=d.items;
+  $('count').textContent=`(${items.length})`;
+  $('hint').textContent=q?`搜索结果 ${items.length} 条`:'';
+  $('empty').style.display=items.length?'none':'block';
+  $('list').innerHTML=items.map(it=>`
+    <tr>
+      <td>
+        <div class="title-cell">${it.link?`<a href="${esc(it.link)}" target="_blank">${esc(it.title)}</a>`:esc(it.title)}</div>
+        ${it.note?`<div class="note">${esc(it.note)}</div>`:''}
+      </td>
+      <td style="color:var(--muted)">${esc(it.source)||'-'}</td>
+      <td><span class="tag ${it.tag==='手动录入'?'manual':''}">${esc(it.tag)||'-'}</span></td>
+      <td><span class="hot-badge">${it.hot||''}</span></td>
+      <td><span class="time">${esc(it.created_at)}</span></td>
+      <td><div class="ops">
+        <button class="btn-ghost btn-sm" onclick="editItem(${it.id})">编辑</button>
+        <button class="btn-danger btn-sm" onclick="delItem(${it.id})">删除</button>
+      </div></td>
+    </tr>`).join('');
+}
+
+// 增删改
+async function addItem(){
+  const title=$('f-title').value.trim();
+  if(!title){ toast('请填写热点内容','err'); $('f-title').focus(); return; }
+  const d=await api('/api/hotspots',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+    title, source:$('f-source').value.trim(), link:$('f-link').value.trim(),
+    note:$('f-note').value.trim(), tag:$('f-tag').value.trim()||'手动录入'
+  })});
+  toast(d.msg,d.ok?'ok':'err');
+  if(d.ok){ ['f-title','f-source','f-link','f-note'].forEach(id=>$(id).value=''); loadList(); }
+}
+function editItem(id){
+  const tr=$('list').querySelector(`button[onclick="editItem(${id})"]`).closest('tr');
+  const cells=tr.querySelectorAll('td');
+  const title=cells[0].querySelector('.title-cell').innerText;
+  const note=cells[0].querySelector('.note')?.innerText||'';
+  const source=cells[1].innerText.trim();
+  const tag=cells[2].innerText.trim();
+  const newTitle=prompt('编辑热点内容：',title);
+  if(newTitle===null||!newTitle.trim()) return;
+  const newNote=prompt('编辑备注：',note);
+  if(newNote===null) return;
+  api('/api/hotspots/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+    title:newTitle.trim(), note:newNote.trim(), source:source==='-'?'':source, tag
+  })}).then(d=>{ toast(d.msg,d.ok?'ok':'err'); loadList(); });
+}
+async function delItem(id){
+  if(!confirm('确定删除这条记录？')) return;
+  const d=await api('/api/hotspots/'+id,{method:'DELETE'});
+  toast(d.msg,d.ok?'ok':'err'); loadList();
+}
+
+// 事件绑定
+$('addBtn').onclick=addItem;
+$('f-title').addEventListener('keydown',e=>{ if(e.ctrlKey&&e.key==='Enter') addItem(); });
+$('fetchBtn').onclick=fetchData;
+$('refreshBtn').onclick=loadList;
+$('clearBtn').onclick=async()=>{ if(!confirm('确定清空全部数据？此操作不可恢复！')) return; const d=await api('/api/clear',{method:'POST'}); toast(d.msg,d.ok?'ok':'err'); loadList(); };
+let searchTimer; $('searchInput').addEventListener('input',()=>{ clearTimeout(searchTimer); searchTimer=setTimeout(loadList,250); });
+
+// 启动
+initSources(); loadList();
+</script>
+</body>
+</html>
