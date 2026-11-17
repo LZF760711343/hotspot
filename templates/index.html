@@ -24,6 +24,8 @@
   label{display:block;font-size:12px;color:var(--muted);margin:10px 0 6px}
   input,textarea,select{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:9px;color:var(--text);padding:11px 13px;font-size:14px;outline:none;font-family:inherit;transition:border .15s}
   input:focus,textarea:focus,select:focus{border-color:var(--accent)}
+  /* 勾选框必须固定尺寸：否则会被上面 input{width:100%} 撑满整行，把标题挤成 0 宽 */
+  input[type=checkbox]{width:16px;height:16px;min-width:16px;flex:0 0 16px;padding:0;margin:2px 0 0;accent-color:var(--accent);cursor:pointer;background:none;border:none;border-radius:0}
   textarea{resize:vertical;min-height:70px}
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   .row-full{grid-column:1/-1}
@@ -46,13 +48,16 @@
   .result{margin-top:16px;max-height:340px;overflow:auto;border:1px solid var(--line);border-radius:10px}
   .result-item{display:flex;gap:12px;align-items:flex-start;padding:11px 14px;border-bottom:1px solid var(--line);background:var(--panel2)}
   .result-item:last-child{border-bottom:none}
-  .result-item .idx{color:var(--accent);font-weight:700;font-size:13px;min-width:26px}
+  .result-item .pick{width:16px;height:16px;accent-color:var(--accent);cursor:pointer;margin-top:2px;flex-shrink:0}
+  .result-item.unpicked{opacity:.45}
+  .result-item .idx{color:var(--accent);font-weight:700;font-size:13px;min-width:22px}
   .result-item .body{flex:1;min-width:0}
   .result-item .t{font-size:13px;line-height:1.5;word-break:break-all}
   .result-item .t a{color:var(--text);text-decoration:none}
   .result-item .t a:hover{color:var(--accent);text-decoration:underline}
   .result-item .meta{color:var(--muted);font-size:11px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .result-head{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:#20242e;font-size:13px;color:var(--muted);position:sticky;top:0;z-index:2}
+  .date-head{padding:8px 14px;background:#262b36;font-size:12px;color:#a9c2ff;font-weight:600;position:sticky;top:41px;z-index:1;border-bottom:1px solid var(--line)}
   /* 列表区 */
   .toolbar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}
   .toolbar .search{flex:1;min-width:200px}
@@ -61,8 +66,10 @@
   th,td{text-align:left;padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:top}
   th{color:var(--muted);font-weight:500;font-size:12px;position:sticky;top:0;background:var(--panel);z-index:1}
   td .title-cell{color:var(--text);line-height:1.5;word-break:break-all}
-  td .title-cell a{color:var(--text);text-decoration:none}
-  td .title-cell a:hover{color:var(--accent)}
+  td .title-cell .polish-link{cursor:pointer;color:var(--text);border-bottom:1px dashed var(--line);transition:color .15s}
+  td .title-cell .polish-link:hover{color:var(--accent);border-bottom-color:var(--accent)}
+  td .title-cell .orig-link{color:var(--muted);text-decoration:none;font-size:12px;margin-left:6px}
+  td .title-cell .orig-link:hover{color:var(--accent)}
   td .note{color:var(--muted);font-size:11px;margin-top:3px;max-width:420px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
   .tag{display:inline-block;padding:2px 9px;border-radius:12px;font-size:11px;background:rgba(124,108,255,.15);color:#b9adff;white-space:nowrap}
   .tag.manual{background:rgba(61,220,151,.13);color:var(--green)}
@@ -75,14 +82,41 @@
   .toast.ok{border-color:var(--green)} .toast.err{border-color:var(--red)}
   .loading{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:-2px;margin-right:6px}
   @keyframes spin{to{transform:rotate(360deg)}}
-  @media(max-width:720px){.grid{grid-template-columns:1fr}.row-full{grid-column:1}.header-right{width:100%}}
+  /* 润色弹框 */
+  .modal-mask{position:fixed;inset:0;background:rgba(0,0,0,.68);display:none;align-items:center;justify-content:center;z-index:50;padding:20px}
+  .modal-mask.show{display:flex}
+  .modal{background:var(--panel);border:1px solid var(--line);border-radius:16px;width:100%;max-width:900px;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 20px 70px rgba(0,0,0,.6)}
+  .modal-head{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--line)}
+  .modal-head h3{font-size:17px}
+  .modal-head .x{background:transparent;color:var(--muted);font-size:24px;line-height:1;padding:2px 8px;border-radius:8px}
+  .modal-head .x:hover{background:var(--panel2);color:var(--text)}
+  .modal-body{padding:18px 22px;overflow:auto;flex:1}
+  .modal-foot{padding:14px 22px;border-top:1px solid var(--line);display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+  .tool-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0 4px}
+  .tool-row .sep{width:1px;height:22px;background:var(--line);margin:0 2px}
+  .tool-btn{background:var(--panel2);border:1px solid var(--line);color:var(--text);padding:7px 12px;border-radius:8px;font-size:12px;cursor:pointer;transition:.15s}
+  .tool-btn:hover{border-color:var(--accent);color:#a9c2ff}
+  .tool-btn.ai{background:linear-gradient(135deg,#7c6cff,#c44fd8);border:none;color:#fff}
+  .tool-btn.ai:hover{filter:brightness(1.12);color:#fff}
+  .polish-area{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:12px}
+  .pane{display:flex;flex-direction:column;min-height:230px}
+  .pane .pane-h{font-size:12px;color:var(--muted);margin-bottom:7px;display:flex;justify-content:space-between;align-items:center}
+  .pane textarea,.pane .preview{flex:1;min-height:210px;background:#12151c;border:1px solid var(--line);border-radius:10px;color:var(--text);padding:14px;font-size:14px;line-height:1.8;white-space:pre-wrap;word-break:break-word;overflow:auto}
+  .pane textarea{resize:vertical;outline:none;font-family:inherit}
+  .pane textarea:focus{border-color:var(--accent)}
+  .pane .preview p{margin:0 0 8px}
+  .cfg-box{display:none;background:#12151c;border:1px solid var(--line);border-radius:10px;padding:14px;margin-top:12px}
+  .cfg-box.show{display:block}
+  .cfg-box .grid{margin-top:2px}
+  .cfg-tip{font-size:11px;color:var(--muted);line-height:1.7;margin-top:8px}
+  @media(max-width:720px){.grid{grid-template-columns:1fr}.row-full{grid-column:1}.header-right{width:100%}.polish-area{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
     <div>
-      <h1><span class="dot">●</span> 热点收集助手</h1>
+      <h1><span class="dot">●</span> 热点收集助手 <span id="verTag" style="font-size:12px;color:var(--muted);font-weight:400"></span></h1>
       <div class="sub">手动录入 · 抓取公开热榜 · 本地保存</div>
     </div>
     <div class="header-right">
@@ -91,38 +125,25 @@
     </div>
   </header>
 
-  <!-- 录入 -->
+  <!-- 关键词搜公众号 -->
   <div class="card">
-    <h2><span class="bar"></span>录入热点</h2>
-    <div class="grid">
-      <div class="row-full">
-        <label>热点内容 / 标题 *</label>
-        <input id="f-title" placeholder="例如：某公众号发布的关于 AI 的行业观察文章">
+    <h2><span class="bar"></span>关键词搜公众号文章</h2>
+    <div class="fetch-bar">
+      <div class="field" style="flex:2;min-width:220px">
+        <label>关键词</label>
+        <input id="wxKwInput" placeholder="例如：人工智能、新能源汽车、某个话题...">
       </div>
-      <div>
-        <label>来源</label>
-        <input id="f-source" placeholder="例如：某某公众号 / 微博">
+      <div class="field" style="flex:0 0 120px">
+        <label>要多少篇</label>
+        <input id="wxLimitInput" type="number" min="1" max="50" value="20">
       </div>
-      <div>
-        <label>标签</label>
-        <input id="f-tag" value="手动录入" placeholder="手动录入">
-      </div>
-      <div class="row-full">
-        <label>链接（可选）</label>
-        <input id="f-link" placeholder="https://...">
-      </div>
-      <div class="row-full">
-        <label>备注（可选）</label>
-        <textarea id="f-note" placeholder="记录这件事的要点、相关人物等"></textarea>
-      </div>
+      <button class="btn-green" id="wxSearchBtn">🔍 搜索公众号</button>
     </div>
-    <div class="form-actions">
-      <button class="btn-primary" id="addBtn">＋ 添加到列表</button>
-      <span style="color:var(--muted);font-size:12px">支持回车快速提交（在标题框按 Ctrl+Enter）</span>
-    </div>
+    <div class="cfg-tip" style="margin-top:8px">按关键词搜索微信公众号文章，按相关度取前 N 篇（含公众号名、发布时间、摘要、原文链接）。<b>公众号文章阅读量仅在微信内可见</b>，搜索源不提供——要按阅读量收集请用下方「公众号热文榜(按阅读量)」。</div>
+    <div id="wxResultBox"></div>
   </div>
 
-  <!-- 抓取 -->
+  <!-- 抓取榜单 -->
   <div class="card">
     <h2><span class="bar"></span>抓取公开热榜</h2>
     <div class="fetch-bar">
@@ -140,38 +161,193 @@
   <div class="card">
     <h2><span class="bar"></span>已收集 <span id="count" style="color:var(--accent);font-weight:400"></span></h2>
     <div class="toolbar">
-      <input class="search" id="searchInput" placeholder="搜索标题、备注、来源、标签...">
+      <input class="search" id="searchInput" autocomplete="off" placeholder="搜索标题、备注、来源、标签...">
       <span class="hint" id="hint"></span>
     </div>
     <div style="overflow-x:auto">
       <table>
-        <thead><tr><th style="width:36%">热点内容</th><th>来源</th><th>标签</th><th>热度</th><th>时间</th><th>操作</th></tr></thead>
+        <thead><tr><th style="width:36%">热点内容</th><th>来源</th><th>标签</th><th>热度/阅读量</th><th>时间</th><th>操作</th></tr></thead>
         <tbody id="list"></tbody>
       </table>
     </div>
-    <div class="empty" id="empty" style="display:none">暂无数据，先在上面录入一条或抓取热榜吧</div>
+    <div class="empty" id="empty" style="display:none">暂无数据，在上面抓取热榜收藏吧</div>
   </div>
+</div>
+
+<!-- 润色弹框 -->
+<div class="modal-mask" id="polishMask">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>✍️ 润色文本</h3>
+      <button class="x" id="polishClose" title="关闭">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="tool-row">
+        <span style="font-size:12px;color:var(--muted)">本地排版：</span>
+        <button class="tool-btn" data-tool="tidy">整理文案</button>
+        <button class="tool-btn" data-tool="noBlank">去空行</button>
+        <button class="tool-btn" data-tool="number">加序号</button>
+        <button class="tool-btn" data-tool="bullet">加项目符号</button>
+        <button class="tool-btn" data-tool="boldTitle">标题加粗</button>
+        <button class="tool-btn" data-tool="reset">还原原文</button>
+        <span class="sep"></span>
+        <button class="tool-btn ai" id="aiPolishBtn">✨ AI 润色</button>
+        <button class="tool-btn" id="aiCfgBtn">AI 设置</button>
+      </div>
+
+      <div class="cfg-box" id="cfgBox">
+        <div style="font-size:13px;color:var(--text);margin-bottom:6px">AI 接口配置（OpenAI 兼容格式，密钥只存本机）</div>
+        <div style="background:rgba(61,220,151,.08);border:1px solid rgba(61,220,151,.25);border-radius:9px;padding:10px 12px;margin-bottom:6px">
+          <div style="font-size:12px;color:var(--green);margin-bottom:6px">🆓 免费模型优先 · 选一个自动填好地址和模型名</div>
+          <select id="cfg-preset"></select>
+          <div class="cfg-tip" id="cfgPresetNote" style="margin-top:6px"></div>
+        </div>
+        <div class="grid">
+          <div>
+            <label>API 地址</label>
+            <input id="cfg-base" placeholder="https://open.bigmodel.cn/api/paas/v4">
+          </div>
+          <div>
+            <label>模型名</label>
+            <input id="cfg-model" placeholder="glm-4-flash">
+          </div>
+          <div class="row-full">
+            <label>API 密钥 <span id="cfgKeyState" style="color:var(--green)"></span></label>
+            <input id="cfg-key" type="password" placeholder="留空表示不修改">
+          </div>
+          <div class="row-full">
+            <label>润色提示词（{text} 代表原文）</label>
+            <textarea id="cfg-prompt" style="min-height:80px"></textarea>
+          </div>
+        </div>
+        <div class="cfg-tip">免费模型推荐：智谱 GLM-4-Flash（永久免费）。各家免费政策以官网实时为准，填好点「保存配置」再点 AI 润色。</div>
+        <div style="margin-top:10px;display:flex;gap:8px">
+          <button class="btn-primary btn-sm" id="cfgSave">保存配置</button>
+          <button class="btn-ghost btn-sm" id="cfgClearKey">清除密钥</button>
+          <button class="btn-ghost btn-sm" id="cfgHide">收起</button>
+        </div>
+      </div>
+
+      <div class="tool-row" style="margin-top:14px">
+        <label style="margin:0;font-size:13px;color:var(--text)">🎯 目标字数</label>
+        <input id="targetChars" type="number" min="0" max="10000" step="50" value="0" placeholder="0" style="width:110px">
+        <span id="targetHint" style="font-size:12px;color:var(--green)">未设置（AI 润色将保持原文篇幅）</span>
+      </div>
+
+      <div class="polish-area">
+        <div class="pane">
+          <div class="pane-h"><span>编辑区（可直接改）</span><span id="charCount">0 字</span></div>
+          <textarea id="polishText" placeholder="原文显示在这里，可直接编辑润色..."></textarea>
+        </div>
+        <div class="pane">
+          <div class="pane-h"><span>预览</span></div>
+          <div class="preview" id="polishPreview"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <span style="color:var(--muted);font-size:11px;margin-right:auto">编辑后预览实时更新，完成后点复制</span>
+      <button class="btn-ghost btn-sm" id="polishCancel">取消</button>
+      <button class="btn-primary btn-sm" id="polishCopy">📋 复制文本</button>
+    </div>
+  </div>
+</div>
+
+<div id="updateBanner" style="display:none;position:fixed;top:0;left:0;right:0;background:#7c4a1e;color:#ffd9a0;padding:12px 20px;text-align:center;font-size:14px;z-index:200;border-bottom:1px solid #a86328">
+  页面版本过旧，可能出现功能异常或报错。请按 <b>Ctrl+F5</b> 强制刷新，或关掉此标签页重新打开 <b>http://127.0.0.1:56789</b>
 </div>
 
 <div class="toast" id="toast"></div>
 
 <script>
 const $ = id => document.getElementById(id);
-let SOURCES = [], currentItems = [];
+const PAGE_VERSION = '16';   // 与后端 APP_VERSION 保持一致
+let currentItems = [];
+let wxCollected = false, hotCollected = false;   // 本轮预览是否已收藏过
 
-function toast(msg, type='ok'){
-  const t=$('toast'); t.textContent=msg; t.className='toast show '+type;
-  clearTimeout(t._t); t._t=setTimeout(()=>t.className='toast',2200);
+// 版本检测：页面内置版本与服务端不一致时提示刷新
+async function checkVersion(){
+  try{
+    const d = await api('/api/version');
+    $('verTag').textContent = 'v'+PAGE_VERSION;
+    if(String(d.version) !== PAGE_VERSION){
+      $('updateBanner').style.display = 'block';
+    }
+    // 每30秒复查一次
+    setTimeout(checkVersion, 30000);
+  }catch(e){ $('verTag').textContent = 'v'+PAGE_VERSION+' (离线)'; }
 }
-async function api(url, opts){ const r=await fetch(url,opts); return r.json(); }
-function esc(s){ return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
-// 初始化数据源
+function toast(msg, type='ok', ms=2200){
+  const t=$('toast'); t.textContent=msg; t.className='toast show '+type;
+  clearTimeout(t._t); t._t=setTimeout(()=>t.className='toast',ms);
+}
+async function api(url, opts){
+  // 失败自动重试一次，消除偶发抖动；两次都失败才抛出
+  for(let i=0;i<2;i++){
+    try{
+      const r=await fetch(url, opts);
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      return await r.json();
+    }catch(e){
+      if(i===1){
+        // 连不上后端：明确提示并引导刷新，不再含糊说"exe没运行"
+        toast('与后台连接中断，请关闭本页面，重新打开 http://127.0.0.1:56789','err',5000);
+        throw e;
+      }
+      await new Promise(res=>setTimeout(res,300));
+    }
+  }
+}
+function esc(s){ return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+// 阅读量数值格式化：100000 -> 10.0万
+function fmtHot(n){
+  n=Number(n)||0;
+  if(n>=100000000) return (n/100000000).toFixed(1)+'亿';
+  if(n>=10000) return (n/10000).toFixed(1)+'万';
+  return n?String(n):'';
+}
+// 抓取预览区：标题仍做成可点跳转原文（方便核对来源）
+function titleHtml(it){
+  const url = (it.link && it.link.trim())
+    ? it.link.trim()
+    : 'https://www.baidu.com/s?wd=' + encodeURIComponent(it.title||'');
+  return `<a href="${esc(url)}" target="_blank" rel="noopener">${esc(it.title)}</a>`;
+}
+// 收藏列表：标题点击弹出润色框，旁边保留一个打开原文的小入口
+function collectedTitleHtml(it){
+  const orig = (it.link && it.link.trim())
+    ? `<a class="orig-link" href="${esc(it.link.trim())}" target="_blank" rel="noopener" title="打开原文">🔗原文</a>`
+    : '';
+  return `<span class="polish-link" onclick="openPolish(${it.id})" title="点击润色">${esc(it.title)}</span>${orig}`;
+}
+
+// 加载模型预设（免费优先，后端已排好序）
+let PRESETS = [];
+async function initPresets(){
+  try{
+    const d = await api('/api/model-presets');
+    PRESETS = d.presets || [];
+    $('cfg-preset').innerHTML = PRESETS.map((p,i)=>
+      `<option value="${i}" ${p.free?'style="color:#3ddc97"':''}>${esc(p.name)}</option>`).join('');
+    applyPreset(0);
+    $('cfg-preset').onchange = e=>applyPreset(Number(e.target.value));
+  }catch(e){}
+}
+function applyPreset(i){
+  const p = PRESETS[i];
+  if(!p) return;
+  if(p.api_base) $('cfg-base').value = p.api_base;
+  if(p.model) $('cfg-model').value = p.model;
+  $('cfgPresetNote').textContent = p.note || '';
+}
+
+// 初始化榜单
 async function initSources(){
   const d = await api('/api/sources');
-  SOURCES = d.sources;
-  $('sourceSelect').innerHTML = SOURCES.map(s=>`<option value="${s.key}">${s.name}</option>`).join('');
-  $('srcChips').innerHTML = SOURCES.map(s=>`<span class="chip" data-k="${s.key}">${s.name}</span>`).join('');
+  const sources = d.sources;
+  $('sourceSelect').innerHTML = sources.map(s=>`<option value="${s.key}">${s.name}</option>`).join('');
+  $('srcChips').innerHTML = sources.map(s=>`<span class="chip" data-k="${s.key}">${s.name}</span>`).join('');
   document.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{
     $('sourceSelect').value=c.dataset.k;
     document.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));
@@ -180,7 +356,7 @@ async function initSources(){
   });
 }
 
-// 抓取预览
+// 抓取榜单预览
 async function fetchData(){
   const key=$('sourceSelect').value;
   const btn=$('fetchBtn');
@@ -191,29 +367,147 @@ async function fetchData(){
     if(!d.ok){ toast(d.msg,'err'); $('resultBox').innerHTML=`<div style="color:var(--muted);font-size:13px;padding:14px">抓取失败：${esc(d.msg)}</div>`; return; }
     currentItems=d.items;
     const rows=d.items.map((it,i)=>`
-      <div class="result-item">
+      <div class="result-item" data-idx="${i}">
+        <input type="checkbox" class="pick" data-idx="${i}" checked>
         <div class="idx">${i+1}</div>
         <div class="body">
-          <div class="t">${it.link?`<a href="${esc(it.link)}" target="_blank">${esc(it.title)}</a>`:esc(it.title)}</div>
-          <div class="meta">${esc(it.note||'')}${it.hot?' · 热度 '+it.hot:''}</div>
+          <div class="t">${titleHtml(it)}</div>
+          <div class="meta">${esc(it.note||'')}${(!it.note&&it.hot)?' · 热度 '+fmtHot(it.hot):''}</div>
         </div>
       </div>`).join('');
     $('resultBox').innerHTML=`
       <div class="result">
-        <div class="result-head"><span>${esc(d.name)} · 共 ${d.items.length} 条</span>
-          <button class="btn-primary btn-sm" id="collectBtn">全部收藏入库</button></div>
+        <div class="result-head">
+          <span>${esc(d.name)} · 共 ${d.items.length} 条 · 已选 <b id="selCount">${d.items.length}</b></span>
+          <span style="display:flex;gap:8px">
+            <button class="btn-ghost btn-sm" id="toggleAllBtn">全不选</button>
+            <button class="btn-primary btn-sm" id="collectBtn">收藏选中 (${d.items.length})</button>
+          </span>
+        </div>
         ${rows}
       </div>`;
-    $('collectBtn').onclick=collectAll;
-    toast(`抓到 ${d.items.length} 条，确认后收藏入库`);
-  }catch(e){ toast('请求失败：'+e.message,'err'); }
+    document.querySelectorAll('.pick').forEach(cb=>cb.addEventListener('change',updateSelection));
+    $('toggleAllBtn').onclick=toggleAll;
+    $('collectBtn').onclick=collectSelected;
+    toast(`抓到 ${d.items.length} 条，勾选需要的再收藏`);
+  }catch(e){ /* api() 已统一提示 */ }
   finally{ btn.disabled=false; btn.textContent='抓取并预览'; }
 }
-async function collectAll(){
-  if(!currentItems.length) return;
-  const d=await api('/api/hotspots/batch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items:currentItems})});
+function selectedItems(){
+  return [...document.querySelectorAll('.pick:checked')].map(cb=>currentItems[Number(cb.dataset.idx)]);
+}
+function updateSelection(){
+  const picked=document.querySelectorAll('.pick:checked').length;
+  const total=document.querySelectorAll('.pick').length;
+  if(picked>0) hotCollected=false;   // 重新勾选后允许再次收藏
+  const sc=$('selCount'), cb=$('collectBtn'), tb=$('toggleAllBtn');
+  if(sc) sc.textContent=picked;
+  if(cb){ cb.textContent=`收藏选中 (${picked})`; cb.disabled=picked===0; }
+  if(tb) tb.textContent=picked===total?'全不选':'全选';
+  document.querySelectorAll('.result-item').forEach(row=>{
+    row.classList.toggle('unpicked', !row.querySelector('.pick').checked);
+  });
+}
+function toggleAll(){
+  const boxes=[...document.querySelectorAll('.pick')];
+  const allChecked=boxes.every(b=>b.checked);
+  boxes.forEach(b=>{ b.checked=!allChecked; });
+  updateSelection();
+}
+async function collectSelected(){
+  const items=selectedItems();
+  if(!items.length){ toast('请先勾选要收藏的条目','err'); return; }
+  const d=await api('/api/hotspots/batch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items})});
   toast(d.msg, d.ok?'ok':'err');
-  if(d.ok) loadList();
+  if(d.ok){
+    loadList();
+    // 保留预览列表（用户还能看到刚抓的内容）：取消勾选并置灰，按钮标记已收藏
+    document.querySelectorAll('.pick').forEach(b=>b.checked=false);
+    updateSelection();
+    hotCollected = true;
+    const cb=$('collectBtn');
+    if(cb){ cb.textContent='✓ 已收藏（重新勾选可再收藏）'; cb.disabled=true; }
+  }
+}
+
+// ===== 关键词搜公众号 =====
+let wxItems = [];
+async function wxSearch(){
+  const kw=$('wxKwInput').value.trim();
+  if(!kw){ toast('请输入关键词','err'); $('wxKwInput').focus(); return; }
+  const limit=Number($('wxLimitInput').value)||20;
+  const btn=$('wxSearchBtn');
+  btn.disabled=true; btn.innerHTML='<span class="loading"></span>搜索中';
+  $('wxResultBox').innerHTML='<div style="color:var(--muted);font-size:13px;padding:14px">正在搜索公众号文章...</div>';
+  try{
+    const d=await api('/api/wechat-search',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({keyword:kw,limit})});
+    if(!d.ok){ toast(d.msg,'err'); $('wxResultBox').innerHTML=`<div style="color:var(--muted);font-size:13px;padding:14px">${esc(d.msg)}</div>`; return; }
+    wxItems=d.items;
+    const rows=d.items.map((it,i)=>`
+      <div class="result-item" data-idx="${i}">
+        <input type="checkbox" class="wx-pick" data-idx="${i}" checked>
+        <div class="idx">${it.rank}</div>
+        <div class="body">
+          <div class="t">${it.link?`<a href="${esc(it.link)}" target="_blank" rel="noopener">${esc(it.title)}</a>`:esc(it.title)}</div>
+          <div class="meta">${esc(it.account||'公众号')}${it.pub_time?' · '+esc(it.pub_time)+' 发布':''}${it.note?' · '+esc(it.note):''}</div>
+        </div>
+      </div>`).join('');
+    $('wxResultBox').innerHTML=`
+      <div class="result">
+        <div class="result-head">
+          <span>「${esc(d.keyword)}」· 共 ${d.total} 篇 · 已选 <b id="wxSelCount">${d.total}</b></span>
+          <span style="display:flex;gap:8px">
+            <button class="btn-ghost btn-sm" id="wxToggleBtn">全不选</button>
+            <button class="btn-primary btn-sm" id="wxCollectBtn">收藏选中 (${d.total})</button>
+          </span>
+        </div>
+        ${rows}
+      </div>`;
+    document.querySelectorAll('.wx-pick').forEach(cb=>cb.addEventListener('change',wxUpdateSelection));
+    $('wxToggleBtn').onclick=wxToggleAll;
+    $('wxCollectBtn').onclick=wxCollectSelected;
+    toast(`搜到 ${d.total} 篇，勾选需要的再收藏`);
+  }catch(e){ /* api() 已统一提示 */ }
+  finally{ btn.disabled=false; btn.textContent='🔍 搜索公众号'; }
+}
+function wxUpdateSelection(){
+  const picked=document.querySelectorAll('.wx-pick:checked').length;
+  const total=document.querySelectorAll('.wx-pick').length;
+  if(picked>0) wxCollected=false;   // 重新勾选后允许再次收藏
+  const sc=$('wxSelCount'), cb=$('wxCollectBtn'), tb=$('wxToggleBtn');
+  if(sc) sc.textContent=picked;
+  if(cb){ cb.textContent=`收藏选中 (${picked})`; cb.disabled=picked===0; }
+  if(tb) tb.textContent=picked===total?'全不选':'全选';
+  document.querySelectorAll('.result-item').forEach(row=>{
+    const box=row.querySelector('.wx-pick');
+    if(box) row.classList.toggle('unpicked', !box.checked);
+  });
+}
+function wxToggleAll(){
+  const boxes=[...document.querySelectorAll('.wx-pick')];
+  const allChecked=boxes.every(b=>b.checked);
+  boxes.forEach(b=>{ b.checked=!allChecked; });
+  wxUpdateSelection();
+}
+async function wxCollectSelected(){
+  const picked=[...document.querySelectorAll('.wx-pick:checked')].map(cb=>wxItems[Number(cb.dataset.idx)]);
+  if(!picked.length){ toast('请先勾选要收藏的文章','err'); return; }
+  const items=picked.map(it=>({
+    title:it.title, link:it.link, source:it.account||'公众号',
+    tag:'公众号搜索', hot:0,
+    note:(it.rank?`第${it.rank}篇 · `:'')+(it.pub_time?it.pub_time+' · ':'')+(it.note||'')
+  }));
+  const d=await api('/api/hotspots/batch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items})});
+  toast(d.msg, d.ok?'ok':'err');
+  if(d.ok){
+    loadList();
+    // 保留搜索结果预览（不闪没）：取消勾选并置灰，按钮标记已收藏；重新勾选可再收藏
+    document.querySelectorAll('.wx-pick').forEach(b=>b.checked=false);
+    wxUpdateSelection();
+    wxCollected = true;
+    const cb=$('wxCollectBtn');
+    if(cb){ cb.textContent='✓ 已收藏（重新勾选可再收藏）'; cb.disabled=true; }
+  }
 }
 
 // 列表
@@ -223,16 +517,24 @@ async function loadList(){
   const items=d.items;
   $('count').textContent=`(${items.length})`;
   $('hint').textContent=q?`搜索结果 ${items.length} 条`:'';
-  $('empty').style.display=items.length?'none':'block';
+  const emptyEl=$('empty');
+  emptyEl.style.display=items.length?'none':'block';
+  if(!items.length){
+    emptyEl.innerHTML = q
+      ? `没有匹配「${esc(q)}」的记录，<span id="clearSearch" style="color:var(--accent);cursor:pointer;text-decoration:underline">点此清除搜索</span>`
+      : '暂无数据，在上面抓取热榜收藏吧';
+    const cs=$('clearSearch');
+    if(cs) cs.onclick=()=>{ $('searchInput').value=''; loadList(); };
+  }
   $('list').innerHTML=items.map(it=>`
     <tr>
       <td>
-        <div class="title-cell">${it.link?`<a href="${esc(it.link)}" target="_blank">${esc(it.title)}</a>`:esc(it.title)}</div>
+        <div class="title-cell">${collectedTitleHtml(it)}</div>
         ${it.note?`<div class="note">${esc(it.note)}</div>`:''}
       </td>
       <td style="color:var(--muted)">${esc(it.source)||'-'}</td>
       <td><span class="tag ${it.tag==='手动录入'?'manual':''}">${esc(it.tag)||'-'}</span></td>
-      <td><span class="hot-badge">${it.hot||''}</span></td>
+      <td><span class="hot-badge">${fmtHot(it.hot)}</span></td>
       <td><span class="time">${esc(it.created_at)}</span></td>
       <td><div class="ops">
         <button class="btn-ghost btn-sm" onclick="editItem(${it.id})">编辑</button>
@@ -241,17 +543,7 @@ async function loadList(){
     </tr>`).join('');
 }
 
-// 增删改
-async function addItem(){
-  const title=$('f-title').value.trim();
-  if(!title){ toast('请填写热点内容','err'); $('f-title').focus(); return; }
-  const d=await api('/api/hotspots',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
-    title, source:$('f-source').value.trim(), link:$('f-link').value.trim(),
-    note:$('f-note').value.trim(), tag:$('f-tag').value.trim()||'手动录入'
-  })});
-  toast(d.msg,d.ok?'ok':'err');
-  if(d.ok){ ['f-title','f-source','f-link','f-note'].forEach(id=>$(id).value=''); loadList(); }
-}
+// 改、删
 function editItem(id){
   const tr=$('list').querySelector(`button[onclick="editItem(${id})"]`).closest('tr');
   const cells=tr.querySelectorAll('td');
@@ -273,16 +565,171 @@ async function delItem(id){
   toast(d.msg,d.ok?'ok':'err'); loadList();
 }
 
+// ============ 润色弹框 ============
+let polishOrigin = '';   // 原始文本，用于"还原原文"
+let polishItem = null;
+
+// 把一条收藏组装成可润色的原文
+function buildRawText(it){
+  const parts = [it.title || ''];
+  if(it.note) parts.push(it.note);
+  if(it.source) parts.push('来源：' + it.source);
+  return parts.join('\n');
+}
+async function openPolish(id){
+  // 从后端拿完整数据（列表里的 note 可能被截断展示）
+  const d = await api('/api/hotspots'+(location.search||''));
+  const it = d.items.find(x=>x.id===id);
+  polishItem = it || null;
+  polishOrigin = it ? buildRawText(it) : '';
+  $('polishText').value = polishOrigin;
+  updatePreview();
+  updateTargetHint();
+  $('polishMask').classList.add('show');
+}
+function closePolish(){ $('polishMask').classList.remove('show'); $('cfgBox').classList.remove('show'); }
+
+function updatePreview(){
+  const txt = $('polishText').value;
+  $('charCount').textContent = txt.length + ' 字';
+  // 简单 Markdown 预览：# 标题、**加粗**、普通段落
+  const html = txt.split('\n').map(line=>{
+    if(!line.trim()) return '';
+    let s = esc(line);
+    if(/^\s*#{1,6}\s/.test(line)) return '<p style="font-weight:700;color:#a9c2ff">'+s.replace(/^\s*#+\s/,'')+'</p>';
+    s = s.replace(/\*\*(.+?)\*\*/g,'<strong style="color:#fff">$1</strong>');
+    return '<p>'+s+'</p>';
+  }).join('');
+  $('polishPreview').innerHTML = html || '<span style="color:var(--muted)">预览区</span>';
+}
+
+// 本地排版工具
+function applyTool(tool){
+  let v = $('polishText').value;
+  const lines = v.split('\n');
+  if(tool==='tidy'){
+    // 整理成热点文案：标题加书名号，其余去多余空格、合并空行
+    const cleaned = lines.map(l=>l.replace(/\s+/g,' ').trim()).filter(Boolean);
+    v = cleaned.length ? `【${cleaned[0]}】\n` + cleaned.slice(1).join('\n') : v;
+  } else if(tool==='noBlank'){
+    v = lines.filter(l=>l.trim()!=='').join('\n');
+  } else if(tool==='number'){
+    const first = lines[0]||'';
+    const rest = lines.slice(1).filter(l=>l.trim());
+    v = [first, ...rest.map((l,i)=>`${i+1}. ${l.trim()}`)].join('\n');
+  } else if(tool==='bullet'){
+    const first = lines[0]||'';
+    const rest = lines.slice(1).filter(l=>l.trim());
+    v = [first, ...rest.map(l=>'• '+l.trim())].join('\n');
+  } else if(tool==='boldTitle'){
+    if(lines.length && lines[0].trim()) lines[0] = '**'+lines[0].trim()+'**';
+    v = lines.join('\n');
+  } else if(tool==='reset'){
+    v = polishOrigin;
+  }
+  $('polishText').value = v;
+  updatePreview();
+}
+
+// 复制
+async function copyPolish(){
+  const txt = $('polishText').value.trim();
+  if(!txt){ toast('没有可复制的内容','err'); return; }
+  try{
+    await navigator.clipboard.writeText(txt);
+    toast('已复制到剪贴板');
+  }catch(e){
+    // 兜底：选中文本让用户手动复制
+    const ta=$('polishText'); ta.select(); document.execCommand('copy'); toast('已复制');
+  }
+}
+
+// AI 配置面板
+async function openCfg(){
+  $('cfgBox').classList.toggle('show');
+  if(!$('cfgBox').classList.contains('show')) return;
+  try{
+    const c = await api('/api/config');
+    $('cfg-base').value = c.api_base || '';
+    $('cfg-model').value = c.model || '';
+    $('cfg-prompt').value = c.prompt || '';
+    $('cfg-key').value = '';
+    $('cfgKeyState').textContent = c.key_set ? '（已配置，留空不改）' : '（未配置）';
+    // 反查匹配的预设并选中
+    const idx = PRESETS.findIndex(p=>p.model && p.model===c.model && p.api_base===c.api_base);
+    if(idx>=0 && $('cfg-preset')){ $('cfg-preset').value=String(idx); $('cfgPresetNote').textContent=PRESETS[idx].note||''; }
+  }catch(e){ toast('读取配置失败','err'); }
+}
+async function saveCfg(){
+  const d = await api('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+    api_base:$('cfg-base').value.trim(), model:$('cfg-model').value.trim(),
+    api_key:$('cfg-key').value.trim(), prompt:$('cfg-prompt').value.trim()
+  })});
+  toast(d.msg, d.ok?'ok':'err');
+  if(d.ok){ $('cfg-key').value=''; $('cfgKeyState').textContent='（已配置，留空不改）'; }
+}
+async function clearKey(){
+  const d = await api('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({api_key:'__CLEAR__'})});
+  toast('已清除密钥', d.ok?'ok':'err');
+  $('cfgKeyState').textContent='（未配置）';
+}
+
+// AI 润色
+async function aiPolish(){
+  const txt = $('polishText').value.trim();
+  if(!txt){ toast('没有可润色的内容','err'); return; }
+  const btn=$('aiPolishBtn');
+  btn.disabled=true; btn.innerHTML='<span class="loading"></span>润色中';
+  try{
+    const target = Number($('targetChars').value) || 0;
+    const d = await api('/api/ai-polish',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:txt, target_chars:target})});
+    if(d.ok){ $('polishText').value = d.text; updatePreview(); toast('AI 润色完成'); }
+    else{
+      toast(d.msg,'err');
+      if('密钥' in d.msg) openCfg();
+    }
+  }catch(e){ /* api() 已统一弹出连接失败的引导提示，这里不重复 */ }
+  finally{ btn.disabled=false; btn.textContent='✨ AI 润色'; }
+}
+
 // 事件绑定
-$('addBtn').onclick=addItem;
-$('f-title').addEventListener('keydown',e=>{ if(e.ctrlKey&&e.key==='Enter') addItem(); });
+function updateTargetHint(){
+  const n = Number($('targetChars').value)||0;
+  const hint = $('targetHint');
+  if(n>0){
+    hint.textContent = `✓ 已设置：点 AI 润色时扩写/压缩到约 ${n} 字`;
+    hint.style.color = 'var(--green)';
+  }else{
+    hint.textContent = '未设置（AI 润色将保持原文篇幅）';
+    hint.style.color = 'var(--muted)';
+  }
+}
+$('targetChars').addEventListener('input', updateTargetHint);
+$('polishText').addEventListener('input', updatePreview);
+$('polishClose').onclick = closePolish;
+$('polishCancel').onclick = closePolish;
+$('polishMask').addEventListener('click', e=>{ if(e.target===$('polishMask')) closePolish(); });
+$('polishCopy').onclick = copyPolish;
+document.querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>applyTool(b.dataset.tool));
+$('aiPolishBtn').onclick = aiPolish;
+$('aiCfgBtn').onclick = openCfg;
+$('cfgSave').onclick = saveCfg;
+$('cfgClearKey').onclick = clearKey;
+$('cfgHide').onclick = ()=>$('cfgBox').classList.remove('show');
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closePolish(); });
+
+// 事件绑定
+$('wxSearchBtn').onclick=wxSearch;
+$('wxKwInput').addEventListener('keydown',e=>{ if(e.ctrlKey&&e.key==='Enter') wxSearch(); });
 $('fetchBtn').onclick=fetchData;
 $('refreshBtn').onclick=loadList;
 $('clearBtn').onclick=async()=>{ if(!confirm('确定清空全部数据？此操作不可恢复！')) return; const d=await api('/api/clear',{method:'POST'}); toast(d.msg,d.ok?'ok':'err'); loadList(); };
 let searchTimer; $('searchInput').addEventListener('input',()=>{ clearTimeout(searchTimer); searchTimer=setTimeout(loadList,250); });
 
 // 启动
-initSources(); loadList();
+// 浏览器刷新会自动恢复输入框历史文字，导致带着旧筛选词查列表"看起来列表空了"——启动时强制清空
+$('searchInput').value='';
+initSources(); initPresets(); loadList(); checkVersion();
 </script>
 </body>
 </html>
